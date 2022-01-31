@@ -2,6 +2,13 @@
 @setlocal DisableDelayedExpansion
 @set uivr=v76
 @echo off
+set "EditionConfig=EditionConfig.ini"
+
+set "CoreEdition=Home"
+set "CoreCountrySpecificEdition=Home China"
+set "ProfessionalEdition=Pro"
+set "PPIProEdition=Team"
+
 :: Change to 1 to start the process directly, and create ISO with install.wim
 :: Change to 2 to start the process directly, and create ISO with install.esd
 set AutoStart=0
@@ -284,27 +291,39 @@ if not defined _UUP exit /b
 if not exist "ConvertConfig.ini" goto :proceed
 findstr /i \[convert-UUP\] ConvertConfig.ini %_Nul1% || goto :proceed
 for %%# in (
-AutoStart
-AddUpdates
-Cleanup
-ResetBase
-NetFx3
-StartVirtual
-SkipISO
-SkipWinRE
-LCUwinre
-SkipBootFiles
-wim2esd
-ForceDism
-RefESD
-SkipEdge
+  EditionConfig
+  AutoStart
+  AddUpdates
+  Cleanup
+  ResetBase
+  NetFx3
+  StartVirtual
+  SkipISO
+  SkipWinRE
+  LCUwinre
+  SkipBootFiles
+  wim2esd
+  ForceDism
+  RefESD
+  SkipEdge
 ) do (
-call :ReadINI %%#
+  call :ReadINI %%# ConvertConfig.ini
+)
+if not exist "%EditionConfig%" goto :proceed
+findstr /i \[edition\] %EditionConfig% %_Nul1% || goto :proceed
+for %%# in (
+  CoreEdition
+  CoreCountrySpecificEdition
+  ProfessionalEdition
+  PPIProEdition
+) do (
+  call :ReadINI %%# %EditionConfig%
+  @REM echo "%%#=!%%#!"
 )
 goto :proceed
 
 :ReadINI
-findstr /b /i %1 ConvertConfig.ini %_Nul1% && for /f "tokens=2 delims==" %%# in ('findstr /b /i %1 ConvertConfig.ini') do set "%1=%%#"
+findstr /b /i %1 %2 %_Nul1% && for /f "tokens=2 delims==" %%# in ('findstr /b /i %1 %2') do set "%1=%%#"
 goto :eof
 
 :proceed
@@ -356,7 +375,7 @@ echo Enter zero '0' to create AIO
 echo Enter individual edition number to create solely
 echo Enter multiple editions numbers to create, separated with spaces
 echo %line%
-set /p _index= ^> Enter your option and press "Enter": 
+set /p _index= ^> Enter your option and press "Enter":
 if not defined _index set _Debug=1&goto :QUIT
 if "%_index%"=="0" (set "_tag= AIO"&set "_ta2=AIO"&set AIO=1&goto :MAINMENU)
 for %%# in (%_index%) do call :setindex %%#
@@ -388,7 +407,7 @@ echo.       5 - Create%_tag% install.esd
 echo.       6 - Configuration Options
 echo.
 echo %line%
-set /p userinp= ^> Enter your option and press "Enter": 
+set /p userinp= ^> Enter your option and press "Enter":
 if not defined userinp set _Debug=1&goto :QUIT
 set userinp=%userinp:~0,1%
 if %userinp% equ 0 (set _Debug=1&goto :QUIT)
@@ -432,7 +451,7 @@ if %AddUpdates% equ 1 (
 )
 echo.
 echo %line%
-set /p userinp= ^> Enter your option and press "Enter": 
+set /p userinp= ^> Enter your option and press "Enter":
 if not defined userinp goto :MAINMENU
 set userinp=%userinp:~0,1%
 if %userinp% equ 0 goto :MAINMENU
@@ -902,11 +921,29 @@ cmd.exe /u /c type bin\info%%A.txt>bin\info%%Au.txt
 )
 for /f "tokens=3 delims=<>" %%# in ('find /i "<NAME>" bin\infou.txt') do (set "_dName=%%#"&set "_os=%%#")
 for /f "tokens=3 delims=<>" %%# in ('find /i "<DESCRIPTION>" bin\infou.txt') do set "_dDesc=%%#"
-for %%# in (ru-ru,zh-cn,zh-tw,zh-hk) do if /i %langid%==%%# set "_os=!_oName!"
+for %%# in (ru-ru,zh-cn,zh-tw,zh-hk) do if /i %langid%==%%# (
+  set FixDisplay=1
+  set "_os=!_oName!"
+  if !_Srvr! neq 1 (
+    set "_dName=%_wtx% !%_flg%Edition!" & set "_dDesc=%_wtx% !%_flg%Edition!"
+  ) else (
+    @REM set "_dName=%_wsr% !%_flg%Edition!" & set "_dDesc=%_wsr% !%_flg%Edition!"
+  )
+)
 if %uups_esd_num% gtr 1 for /L %%A in (2,1,%uups_esd_num%) do (
 for /f "tokens=3 delims=<>" %%# in ('find /i "<NAME>" bin\info%%Au.txt') do (set "_dName%%A=%%#"&set "_os%%A=%%#")
 for /f "tokens=3 delims=<>" %%# in ('find /i "<DESCRIPTION>" bin\info%%Au.txt') do set "_dDesc%%A=%%#"
-for %%# in (ru-ru,zh-cn,zh-tw,zh-hk) do if /i !langid%%A!==%%# set "_os%%A=!_oName%%A!"
+for %%# in (ru-ru,zh-cn,zh-tw,zh-hk) do if /i !langid%%A!==%%# (
+  set FixDisplay=1
+  set "_os%%A=!_oName%%A!"
+  if !_ESDSrv%%A! neq 1 (
+    call call set "_dName%%A=%_wtx% %%%%%%edition%%A%%Edition%%%%"
+    call call set "_dDesc%%A=%_wtx% %%%%%%edition%%A%%Edition%%%%"
+  ) else (
+    @REM call call set "_dName%%A=%_wsr% %%%%%%edition%%A%%Edition%%%%"
+    @REM call call set "_dDesc%%A=%_wsr% %%%%%%edition%%A%%Edition%%%%"
+  )
+)
 )
 >nul chcp %oemcp%
 del /f /q bin\info*.txt
@@ -2608,7 +2645,7 @@ wimlib-imagex.exe info "%_www%" !_imgi! !ddesc! !ddesc! --image-property DISPLAY
 if %uProN% equ 0 goto :crSDC
 %_dism2%:"!_cabdir!" /Mount-Wim /Wimfile:"%_www%" /Index:%iHomN% /MountDir:"%_mount%" %_Supp%
 %_dism2%:"!_cabdir!" /Image:"%_mount%" /LogPath:"%_dLog%\DismCoreN2ProN.log" /Set-Edition:ProfessionalN /Channel:Retail
-%_dism2%:"!_cabdir!" /Unmount-Image /MountDir:"%_mount%" /Commit /Append 
+%_dism2%:"!_cabdir!" /Unmount-Image /MountDir:"%_mount%" /Commit /Append
 call set /a _imgi+=1
 call set ddesc="%_wtx% Pro N"
 wimlib-imagex.exe info "%_www%" !_imgi! !ddesc! !ddesc! --image-property DISPLAYNAME=!ddesc! --image-property DISPLAYDESCRIPTION=!ddesc! --image-property FLAGS=ProfessionalN %_Nul3%
@@ -2617,7 +2654,7 @@ wimlib-imagex.exe info "%_www%" !_imgi! !ddesc! !ddesc! --image-property DISPLAY
 if %uSDC% equ 0 goto :crSDD
 %_dism2%:"!_cabdir!" /Mount-Wim /Wimfile:"%_www%" /Index:%iSSC% /MountDir:"%_mount%" %_Supp%
 %_dism2%:"!_cabdir!" /Image:"%_mount%" /LogPath:"%_dLog%\DismSrvSc2SrvDc.log" /Set-Edition:ServerDatacenterCor /Channel:Retail
-%_dism2%:"!_cabdir!" /Unmount-Image /MountDir:"%_mount%" /Commit /Append 
+%_dism2%:"!_cabdir!" /Unmount-Image /MountDir:"%_mount%" /Commit /Append
 call set /a _imgi+=1
 call set cname="%_wsr% ServerDatacenterCore"
 call set dname="%_wsr% Datacenter"

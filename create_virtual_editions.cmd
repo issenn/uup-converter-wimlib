@@ -2,6 +2,27 @@
 @setlocal DisableDelayedExpansion
 @set uivr=v75
 @echo off
+set "EditionConfig=EditionConfig.ini"
+
+set "CoreSingleLanguageEdition=Home Single Language"
+set "ProfessionalWorkstationEdition=Pro for Workstations"
+set "ProfessionalWorkstationNEdition=Pro N for Workstations"
+set "ProfessionalEducationEdition=Pro Education"
+set "ProfessionalEducationNEdition=Pro Education N"
+set "EducationEdition=Education"
+set "EducationNEdition=Education N"
+set "EnterpriseEdition=Enterprise"
+set "EnterpriseNEdition=Enterprise N"
+set "EnterpriseSEdition=Enterprise LTSC"
+set "IoTEnterpriseEdition=IoT Enterprise"
+set "IoTEnterpriseSEdition=IoT Enterprise LTSC"
+set "ServerRdshEdition=Enterprise multi-session"
+set "ServerRdshOldEdition=Enterprise Remote Server"
+set "ProfessionalCountrySpecificEdition=Pro China Only"
+set "ProfessionalSingleLanguageEdition=Pro Single Language"
+set "CloudEditionEdition=SE"
+set "CloudEditionNEdition=SE N"
+
 :: Change to 1 to start the process directly
 :: it will create editions specified in AutoEditions if possible
 set AutoStart=0
@@ -13,6 +34,7 @@ set AutoStart=0
 :: Enterprise,Education,ProfessionalEducation,ProfessionalWorkstation,ServerRdsh,IoTEnterprise,CloudEdition
 :: EnterpriseN,EducationN,ProfessionalEducationN,ProfessionalWorkstationN,CloudEditionN
 :: CoreSingleLanguage
+:: ProfessionalCountrySpecific,ProfessionalSingleLanguage
 
 :: example: set "AutoEditions=Enterprise,ProfessionalWorkstation,Education"
 :: example: set "AutoEditions=Enterprise ServerRdsh"
@@ -123,7 +145,7 @@ if %_Debug% equ 0 (
 
 :Begin
 title Virtual Editions %uivr%
-set "vEditions=Enterprise,Education,ProfessionalEducation,ProfessionalWorkstation,EnterpriseN,EducationN,ProfessionalEducationN,ProfessionalWorkstationN,CoreSingleLanguage,ServerRdsh,IoTEnterprise,IoTEnterpriseS,CloudEdition,CloudEditionN"
+set "vEditions=Enterprise,Education,ProfessionalEducation,ProfessionalWorkstation,EnterpriseN,EducationN,ProfessionalEducationN,ProfessionalWorkstationN,CoreSingleLanguage,ServerRdsh,IoTEnterprise,IoTEnterpriseS,CloudEdition,CloudEditionN,ProfessionalCountrySpecific,ProfessionalSingleLanguage"
 set ERRORTEMP=
 set _all=0
 set _dir=0
@@ -142,19 +164,45 @@ if not exist ".\bin\%%#" (set _bin=%%#&goto :E_Bin)
 if not exist "ConvertConfig.ini" goto :proceed
 findstr /i \[create_virtual_editions\] ConvertConfig.ini %_Nul1% || goto :proceed
 for %%# in (
-AutoStart
-DeleteSource
-Preserve
-SkipISO
-wim2esd
+  EditionConfig
+  AutoStart
+  DeleteSource
+  Preserve
+  SkipISO
+  wim2esd
 ) do (
-call :ReadINI %%#
+  call :ReadINI %%# ConvertConfig.ini
 )
 findstr /b /i vAutoEditions ConvertConfig.ini %_Nul1% && for /f "tokens=1* delims==" %%A in ('findstr /b /i vAutoEditions ConvertConfig.ini') do set "AutoEditions=%%B"
+if not exist "%EditionConfig%" goto :proceed
+findstr /i \[edition\] %EditionConfig% %_Nul1% || goto :proceed
+for %%# in (
+  CoreSingleLanguageEdition
+  ProfessionalWorkstationEdition
+  ProfessionalWorkstationNEdition
+  ProfessionalEducationEdition
+  ProfessionalEducationNEdition
+  EducationEdition
+  EducationNEdition
+  EnterpriseEdition
+  EnterpriseNEdition
+  EnterpriseSEdition
+  IoTEnterpriseEdition
+  IoTEnterpriseSEdition
+  ServerRdshEdition
+  ServerRdshOldEdition
+  ProfessionalCountrySpecificEdition
+  ProfessionalSingleLanguageEdition
+  CloudEditionEdition
+  CloudEditionNEdition
+) do (
+  call :ReadINI %%# %EditionConfig%
+  @REM echo "%%#=!%%#!"
+)
 goto :proceed
 
 :ReadINI
-findstr /b /i v%1 ConvertConfig.ini %_Nul1% && for /f "tokens=2 delims==" %%# in ('findstr /b /i v%1 ConvertConfig.ini') do set "%1=%%#"
+findstr /b /i v%1 %2 %_Nul1% && for /f "tokens=2 delims==" %%# in ('findstr /b /i v%1 %2') do set "%1=%%#"
 goto :eof
 
 :proceed
@@ -279,6 +327,8 @@ if /i %%#==IoTEnterprise if %EditionProf% equ 1 if %_build% geq 18277 (set IoTEn
 if /i %%#==IoTEnterpriseS if %EditionLTSC% equ 1 if %_build% geq 19041 (set IoTEnterpriseS=1)
 if /i %%#==CloudEdition if %EditionProf% equ 1 if %_build% geq 21364 (set CloudEdition=1)
 if /i %%#==CloudEditionN if %EditionProN% equ 1 if %_build% geq 21364 (set CloudEditionN=1)
+if /i %%#==ProfessionalCountrySpecific if %EditionProf% equ 1 (set ProfessionalCountrySpecific=1)
+if /i %%#==ProfessionalSingleLanguage if %EditionProf% equ 1 (set ProfessionalSingleLanguage=1)
 )
 goto :CREATEMENU
 
@@ -317,6 +367,10 @@ if %CloudEdition% equ 0 if %_build% geq 21364 echo 13. SE {Cloud}
 if %EditionProN% equ 1 (
 if %CloudEditionN% equ 0 if %_build% geq 21364 echo 14. SE N {Cloud N}
 )
+if %EditionProf% equ 1 (
+  if %ProfessionalCountrySpecific% equ 0 echo. 15. Pro China Only {OEM}
+  if %ProfessionalSingleLanguage% equ 0 echo. 16. Pro Single Language {OEM}
+)
 exit /b
 
 :MULTIMENU
@@ -340,7 +394,7 @@ if errorlevel 1 goto :ALLMENU
 goto :MULTIMENU
 
 :ALLMENU
-for %%# in (Enterprise,Education,ProfessionalEducation,ProfessionalWorkstation,ServerRdsh) do (
+for %%# in (Enterprise,Education,ProfessionalEducation,ProfessionalWorkstation,ServerRdsh,ProfessionalCountrySpecific,ProfessionalSingleLanguage) do (
 if %EditionProf% equ 1 set %%#=1
 )
 for %%# in (EnterpriseN,EducationN,ProfessionalEducationN,ProfessionalWorkstationN) do (
@@ -363,7 +417,7 @@ echo.
 echo %line%
 echo Enter edition number to create, or zero '0' to return
 echo %line%
-set /p _single= ^> Enter your option and press "Enter": 
+set /p _single= ^> Enter your option and press "Enter":
 if not defined _single (set _Debug=1&goto :QUIT)
 if "%_single%"=="0" (set "_single="&goto :MULTIMENU)
 if %_single% equ 1 if %EditionProf% equ 1 if %Enterprise% equ 0 (set Enterprise=1&set verify=1)
@@ -380,6 +434,8 @@ if %_single% equ 11 if %EditionProf% equ 1 if %IoTEnterprise% equ 0 if %_build% 
 if %_single% equ 12 if %EditionLTSC% equ 1 if %IoTEnterpriseS% equ 0 if %_build% geq 19041 (set IoTEnterpriseS=1&set verify=1)
 if %_single% equ 13 if %EditionProf% equ 1 if %CloudEdition% equ 0 if %_build% geq 21364 (set CloudEdition=1&set verify=1)
 if %_single% equ 14 if %EditionProN% equ 1 if %CloudEditionN% equ 0 if %_build% geq 21364 (set CloudEditionN=1&set verify=1)
+if %_single% equ 15 if %EditionProf% equ 1 if %ProfessionalCountrySpecific% equ 0 (set ProfessionalCountrySpecific=1&set verify=1)
+if %_single% equ 16 if %EditionProf% equ 1 if %ProfessionalSingleLanguage% equ 0 (set ProfessionalSingleLanguage=1&set verify=1)
 if %verify% equ 1 goto :CREATEMENU
 set _single=
 goto :SINGLEMENU
@@ -397,7 +453,7 @@ echo Enter editions numbers to create separated with spaces
 echo examples: 1 3 4 or 5 1 or 4 2 10
 echo Enter zero '0' to return
 echo %line%
-set /p _index= ^> Enter your option and press "Enter": 
+set /p _index= ^> Enter your option and press "Enter":
 if not defined _index (set _Debug=1&goto :QUIT)
 if "%_index%"=="0" (set "_index="&goto :MULTIMENU)
 for %%# in (%_index%) do (
@@ -415,6 +471,8 @@ if %%# equ 11 if %EditionProf% equ 1 if %IoTEnterprise% equ 0 if %_build% geq 18
 if %%# equ 12 if %EditionLTSC% equ 1 if %IoTEnterpriseS% equ 0 if %_build% geq 19041 (set IoTEnterpriseS=1&set verify=1)
 if %%# equ 13 if %EditionProf% equ 1 if %CloudEdition% equ 0 if %_build% geq 21364 (set CloudEdition=1&set verify=1)
 if %%# equ 14 if %EditionProN% equ 1 if %CloudEditionN% equ 0 if %_build% geq 21364 (set CloudEditionN=1&set verify=1)
+if %%# equ 15 if %EditionProf% equ 1 if %ProfessionalCountrySpecific% equ 0 (set ProfessionalCountrySpecific=1&set verify=1)
+if %%# equ 16 if %EditionProf% equ 1 if %ProfessionalSingleLanguage% equ 0 (set ProfessionalSingleLanguage=1&set verify=1)
 )
 if %verify% equ 1 goto :CREATEMENU
 set _index=
@@ -540,7 +598,7 @@ type nul>bin\temp\virtual.txt
 wimlib-imagex.exe update ISOFOLDER\sources\temp.wim %index% < bin\temp\virtual.txt %_Null%
 rmdir /s /q bin\temp\
 echo.
-wimlib-imagex.exe info ISOFOLDER\sources\temp.wim %index% --image-property WINDOWS/EDITIONID=%EditionID% --image-property FLAGS=%EditionID% --image-property DISPLAYNAME="%winver% %desc%" --image-property DISPLAYDESCRIPTION="%winver% %desc%"
+wimlib-imagex.exe info ISOFOLDER\sources\temp.wim %index% --image-property WINDOWS/EDITIONID="%EditionID%" --image-property NAME="%winver% %desc%" --image-property DESCRIPTION="%winver% %desc%" --image-property FLAGS="%EditionID%" --image-property DISPLAYNAME="%winver% %dname%" --image-property DISPLAYDESCRIPTION="%winver% %ddesc%"
 echo.
 set modified=1
 exit /b
@@ -772,6 +830,8 @@ if /i %_edtn%==IoTEnterprise set DVDLABEL=IOTE_%archl%FRE_%langid%_DV5&set DVDIS
 if /i %_edtn%==IoTEnterpriseS set DVDLABEL=IOTS_%archl%FRE_%langid%_DV5&set DVDISO=%_label%IOTENTERPRISES_OEMRET_%archl%FRE_%langid%
 if /i %_edtn%==EnterpriseS set DVDLABEL=CES_%archl%FREV_%langid%_DV5&set DVDISO=%_label%ENTERPRISES_VOL_%archl%FRE_%langid%&set _VL=1
 if /i %_edtn%==EnterpriseSN set DVDLABEL=CESN_%archl%FREV_%langid%_DV5&set DVDISO=%_label%ENTERPRISESN_VOL_%archl%FRE_%langid%&set _VL=1
+if /i %_edtn%==ProfessionalCountrySpecific set DVDLABEL=CPRCSA_%archl%FREV_%langid%_DV5&set DVDISO=%_label%PROCHINA_OEM_%archl%FRE_%langid%
+if /i %_edtn%==ProfessionalSingleLanguage set DVDLABEL=CPRSLA_%archl%FREV_%langid%_DV5&set DVDISO=%_label%PROSINGLELANGUAGE_OEM_%archl%FRE_%langid%
 if %_VL% equ 0 exit /b
 (
 echo [EditionID]
@@ -848,8 +908,44 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003400330036003
 set "Print=1"
 set "Insecure=0"
 set "desc=IoT Enterprise LTSC"
+set "dname=%IoTEnterpriseSEdition%"
+set "ddesc=%IoTEnterpriseSEdition%"
 set "source=%IndexLTSC%"
 set "winver=%wtxLTSC%"
+call :WIM
+exit /b
+
+:ProfessionalSingleLanguage
+set "EditionID=%1"
+set "ProductId=99999-90020-00067-AA671"
+set "OSProductContentId=f806a9f8-7645-ed31-212a-bb7527f467b3"
+set "OSProductPfn=Microsoft.Windows.138.X99-99999_8wekyb3d8bbwe"
+set "DigitalProductId=A40000000300000039393939392D39303032302D30303036372D4141363731003F420F005B54485D5839392D39393939390000003F423F4CE801F8B697544A0553D20800000000005ED3CB5D9F3D05FB0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000A493493B"
+set "DigitalProductId4=F804000004000000350035003000340031002D00390039003900390039002D003000300032002D003000300030003000360037002D00300030002D0032003000350032002D00310038003300360033002E0030003000300030002D003300310037003200300031003900000000000000000000000000000000000000000000000000000000000000610034003800390033003800610061002D0036003200660061002D0034003900360036002D0039006400340034002D00390066003000340064006100330066003700320066003200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000500072006F00660065007300730069006F006E0061006C00530069006E0067006C0065004C0061006E006700750061006700650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003F423F4CE801F8B697544A0553D20800E082F3CD124BAA0818A7A4208FD74988AA8A2AAC7301E6357F7633D05EA1E3F72773366DE6B5073FF8EC827F0340D9319077C80C4649402DCFF56A3FF0F274405B00540048005D005800390039002D0039003900390039003900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000520065007400610069006C000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000520065007400610069006C000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+set "Print=1"
+set "Insecure=0"
+set "desc=Pro Single Language"
+set "dname=%ProfessionalSingleLanguageEdition%"
+set "ddesc=%ProfessionalSingleLanguageEdition%"
+set "source=%IndexProf%"
+set "winver=%wtxProf%"
+call :WIM
+exit /b
+
+:ProfessionalCountrySpecific
+set "EditionID=%1"
+set "ProductId=99999-90020-00066-AA586"
+set "OSProductContentId=3e1f71dc-b9ae-fd63-c3a2-e99682911015"
+set "OSProductPfn=Microsoft.Windows.139.X99-99999_8wekyb3d8bbwe"
+set "DigitalProductId=A40000000300000039393939392D39303032302D30303036362D4141353836003F420F005B54485D5839392D39393939390000003F422F4CE801FC13371A2B6DEB4F0800000000006ED4CB5DDA23D6F40000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000511DF46D"
+set "DigitalProductId4=F804000004000000350035003000340031002D00390039003900390039002D003000300032002D003000300030003000360036002D00300030002D0032003000350032002D00310038003300360033002E0030003000300030002D003300310037003200300031003900000000000000000000000000000000000000000000000000000000000000660037006100660037006400300039002D0034003000650034002D0034003100390063002D0061003400390062002D00650061006500330036003600360038003900650062006400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000500072006F00660065007300730069006F006E0061006C0043006F0075006E00740072007900530070006500630069006600690063000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003F422F4CE801FC13371A2B6DEB4F0800B357C1A823A82330BAD99C6E65E42D1058ECFFCAD30DD54F8D05374D50D99CA60150A416DD4A63F23A29B8E1D1BD1BDAC94D90C704991EC5B908F2EF7821CA905B00540048005D005800390039002D0039003900390039003900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000520065007400610069006C000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000520065007400610069006C000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+set "Print=1"
+set "Insecure=0"
+set "desc=Pro China Only"
+set "dname=%ProfessionalCountrySpecificEdition%"
+set "ddesc=%ProfessionalCountrySpecificEdition%"
+set "source=%IndexProf%"
+set "winver=%wtxProf%"
 call :WIM
 exit /b
 
@@ -864,6 +960,8 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003400330036003
 set "Print=1"
 set "Insecure=0"
 set "desc=IoT Enterprise"
+set "dname=%IoTEnterpriseEdition%"
+set "ddesc=%IoTEnterpriseEdition%"
 set "source=%IndexProf%"
 set "winver=%wtxProf%"
 call :WIM
@@ -879,6 +977,8 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003400330032003
 set "Print=1"
 set "Insecure=0"
 set "desc=Enterprise multi-session"
+set "dname=%ServerRdshEdition%"
+set "ddesc=%ServerRdshEdition%"
 set "source=%IndexProf%"
 set "winver=%wtxProf%"
 if %_build% lss 17763 (
@@ -888,6 +988,8 @@ set "OSProductPfn=Microsoft.Windows.175.X21-41298_8wekyb3d8bbwe"
 set "DigitalProductId=A40000000300000030303338392D35303030302D30303030312D414132363700370F00005B5253335D5832312D34313239380000370F10000000BCF257653B915B7B08000000000033CEF96093E107C603000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004CF96235"
 set "DigitalProductId4=F804000004000000350035003000340031002D00300033003800390035002D003000300030002D003000300030003000300031002D00300033002D0031003000320035002D0039003200300030002E0030003000300030002D0032003000330032003000320031000000000000000000000000000000000000000000000000000000000000000000650034006400620035003000650061002D0062006400610031002D0034003500360036002D0062003000340037002D00300063006100350030006100620063003600660030003700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000530065007200760065007200520064007300680000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000370F10000000BCF257653B915B7B08007632A0BB31567060B7BAA12133B532B4C584703400AE491DCB35FA2AB047DA9400B57AED3AD9CC7CB073C821FB8EF6E459CCCB5E7DB66FFC118BE0AD70D105E15B005200530033005D005800320031002D00340031003200390038000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000056006F006C0075006D0065003A00470056004C004B000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000056006F006C0075006D0065000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 set "desc=Enterprise Remote Server"
+set "dname=%ServerRdshOldEdition%"
+set "ddesc=%ServerRdshOldEdition%"
 )
 call :WIM
 exit /b
@@ -902,6 +1004,8 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003300320039003
 set "Print=1"
 set "Insecure=0"
 set "desc=Enterprise"
+set "dname=%EnterpriseEdition%"
+set "ddesc=%EnterpriseEdition%"
 set "source=%IndexProf%"
 set "winver=%wtxProf%"
 call :WIM
@@ -917,6 +1021,8 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003300320038003
 set "Print=1"
 set "Insecure=0"
 set "desc=Education"
+set "dname=%EducationEdition%"
+set "ddesc=%EducationEdition%"
 set "source=%IndexProf%"
 set "winver=%wtxProf%"
 call :WIM
@@ -932,6 +1038,8 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003300380030003
 set "Print=0"
 set "Insecure=1"
 set "desc=Pro Education"
+set "dname=%ProfessionalEducationEdition%"
+set "ddesc=%ProfessionalEducationEdition%"
 set "source=%IndexProf%"
 set "winver=%wtxProf%"
 call :WIM
@@ -947,6 +1055,8 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003300390031003
 set "Print=0"
 set "Insecure=1"
 set "desc=Pro for Workstations"
+set "dname=%ProfessionalWorkstationEdition%"
+set "ddesc=%ProfessionalWorkstationEdition%"
 set "source=%IndexProf%"
 set "winver=%wtxProf%"
 call :WIM
@@ -963,6 +1073,8 @@ set "DigitalProductId4=f804000004000000350035003000340031002d0030003400370035003
 set "Print=0"
 set "Insecure=1"
 set "desc=SE"
+set "dname=%CloudEditionEdition%"
+set "ddesc=%CloudEditionEdition%"
 set "source=%IndexProf%"
 set "winver=%wtxProf%"
 call :WIM
@@ -978,6 +1090,8 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003300320039003
 set "Print=1"
 set "Insecure=0"
 set "desc=Enterprise N"
+set "dname=%EnterpriseNEdition%"
+set "ddesc=%EnterpriseNEdition%"
 set "source=%IndexProN%"
 set "winver=%wtxProN%"
 call :WIM
@@ -993,6 +1107,8 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003300320038003
 set "Print=1"
 set "Insecure=0"
 set "desc=Education N"
+set "dname=%EducationNEdition%"
+set "ddesc=%EducationNEdition%"
 set "source=%IndexProN%"
 set "winver=%wtxProN%"
 call :WIM
@@ -1008,6 +1124,8 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003300380030003
 set "Print=0"
 set "Insecure=1"
 set "desc=Pro Education N"
+set "dname=%ProfessionalEducationNEdition%"
+set "ddesc=%ProfessionalEducationNEdition%"
 set "source=%IndexProN%"
 set "winver=%wtxProN%"
 call :WIM
@@ -1023,6 +1141,8 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003300390032003
 set "Print=0"
 set "Insecure=1"
 set "desc=Pro N for Workstations"
+set "dname=%ProfessionalWorkstationNEdition%"
+set "ddesc=%ProfessionalWorkstationNEdition%"
 set "source=%IndexProN%"
 set "winver=%wtxProN%"
 call :WIM
@@ -1039,6 +1159,8 @@ set "DigitalProductId4=f804000004000000350035003000340031002d0030003400370036003
 set "Print=0"
 set "Insecure=1"
 set "desc=SE N"
+set "dname=%CloudEditionNEdition%"
+set "ddesc=%CloudEditionNEdition%"
 set "source=%IndexProN%"
 set "winver=%wtxProN%"
 call :WIM
@@ -1054,6 +1176,8 @@ set "DigitalProductId4=F804000004000000350035003000340031002D0030003300320037003
 set "Print=0"
 set "Insecure=1"
 set "desc=Home Single Language"
+set "dname=%CoreSingleLanguageEdition%"
+set "ddesc=%CoreSingleLanguageEdition%"
 set "source=%IndexHome%"
 set "winver=%wtxHome%"
 call :WIM

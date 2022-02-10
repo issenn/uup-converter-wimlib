@@ -924,10 +924,13 @@ for /f "tokens=3 delims=<>" %%# in ('find /i "<DESCRIPTION>" bin\infou.txt') do 
 for %%# in (ru-ru,zh-cn,zh-tw,zh-hk) do if /i %langid%==%%# (
   set FixDisplay=1
   set "_os=!_oName!"
+  set "_os1=!_oName!"
   if !_Srvr! neq 1 (
     set "_dName=%_wtx% !%_flg%Edition!" & set "_dDesc=%_wtx% !%_flg%Edition!"
+    set "_dName1=%_wtx% !%_flg%Edition!" & set "_dDesc1=%_wtx% !%_flg%Edition!"
   ) else (
     @REM set "_dName=%_wsr% !%_flg%Edition!" & set "_dDesc=%_wsr% !%_flg%Edition!"
+    @REM set "_dName1=%_wsr% !%_flg%Edition!" & set "_dDesc1=%_wsr% !%_flg%Edition!"
   )
 )
 if %uups_esd_num% gtr 1 for /L %%A in (2,1,%uups_esd_num%) do (
@@ -939,6 +942,7 @@ for %%# in (ru-ru,zh-cn,zh-tw,zh-hk) do if /i !langid%%A!==%%# (
   if !_ESDSrv%%A! neq 1 (
     call call set "_dName%%A=%_wtx% %%%%%%edition%%A%%Edition%%%%"
     call call set "_dDesc%%A=%_wtx% %%%%%%edition%%A%%Edition%%%%"
+    @REM call call set "_dDesc%%A=%_wtx% ^^^!^!edition%%A^!Edition^^^!"
   ) else (
     @REM call call set "_dName%%A=%_wsr% %%%%%%edition%%A%%Edition%%%%"
     @REM call call set "_dDesc%%A=%_wsr% %%%%%%edition%%A%%Edition%%%%"
@@ -2640,6 +2644,11 @@ if %uProf% equ 0 goto :crProN
 call set /a _imgi+=1
 call set ddesc="%_wtx% Pro"
 wimlib-imagex.exe info "%_www%" !_imgi! !ddesc! !ddesc! --image-property DISPLAYNAME=!ddesc! --image-property DISPLAYDESCRIPTION=!ddesc! --image-property FLAGS=Professional %_Nul3%
+if !FixDisplay! equ 1 (
+  for /L %%# in (1,1,%uups_esd_num%) do if "!edition%%#!"=="Professional" (
+    wimlib-imagex.exe info "%_www%" !_imgi! "!_os%%#!" "!_os%%#!" --image-property DISPLAYNAME="!_dName%%#!" --image-property DISPLAYDESCRIPTION="!_dDesc%%#!" --image-property FLAGS=!edition%%#! %_Nul3%
+  )
+)
 
 :crProN
 if %uProN% equ 0 goto :crSDC
@@ -2649,6 +2658,11 @@ if %uProN% equ 0 goto :crSDC
 call set /a _imgi+=1
 call set ddesc="%_wtx% Pro N"
 wimlib-imagex.exe info "%_www%" !_imgi! !ddesc! !ddesc! --image-property DISPLAYNAME=!ddesc! --image-property DISPLAYDESCRIPTION=!ddesc! --image-property FLAGS=ProfessionalN %_Nul3%
+if !FixDisplay! equ 1 (
+  for /L %%# in (1,1,%uups_esd_num%) do if "!edition%%#!"=="ProfessionalN" (
+    wimlib-imagex.exe info "%_www%" !_imgi! "!_os%%#!" "!_os%%#!" --image-property DISPLAYNAME="!_dName%%#!" --image-property DISPLAYDESCRIPTION="!_dDesc%%#!" --image-property FLAGS=!edition%%#! %_Nul3%
+  )
+)
 
 :crSDC
 if %uSDC% equ 0 goto :crSDD

@@ -1,6 +1,7 @@
 <!-- : Begin batch script
 @setlocal DisableDelayedExpansion
-@set uivr=v76
+:: uup-converter-wimlib-77f.7z
+@set uivr=v77
 @echo off
 set "EditionConfig=EditionConfig.ini"
 
@@ -837,6 +838,10 @@ type nul>bin\boot-wim.txt
 for %%# in (background_cli.bmp, background_svr.bmp) do if exist "ISOFOLDER\sources\%%#" (
 >>bin\boot-wim.txt echo add 'ISOFOLDER^\sources^\%%#' '^\Windows^\system32^\winre.jpg'
 )
+for %%# in (background_cli.png, background_svr.png) do if exist "ISOFOLDER\sources\%%#" (
+>>bin\boot-wim.txt echo add 'ISOFOLDER^\sources^\%%#' '^\Windows^\system32^\winre.jpg'
+>>bin\boot-wim.txt echo add 'ISOFOLDER^\sources^\%%#' '^\Windows^\system32^\winre.png'
+)
 wimlib-imagex.exe update ISOFOLDER\sources\boot.wim 1 < bin\boot-wim.txt %_Null%
 rmdir /s /q bin\temp\
 
@@ -849,6 +854,12 @@ type nul>bin\boot-wim.txt
 for %%# in (background_cli.bmp, background_svr.bmp) do if exist "ISOFOLDER\sources\%%#" (
 >>bin\boot-wim.txt echo add 'ISOFOLDER^\sources^\%%#' '^\Windows^\system32^\winre.jpg'
 >>bin\boot-wim.txt echo add 'ISOFOLDER^\sources^\%%#' '^\sources^\background.bmp'
+)
+for %%# in (background_cli.png, background_svr.png) do if exist "ISOFOLDER\sources\%%#" (
+>>bin\boot-wim.txt echo add 'ISOFOLDER^\sources^\%%#' '^\Windows^\system32^\winre.jpg'
+>>bin\boot-wim.txt echo add 'ISOFOLDER^\sources^\%%#' '^\sources^\background.bmp'
+>>bin\boot-wim.txt echo add 'ISOFOLDER^\sources^\%%#' '^\Windows^\system32^\winre.png'
+>>bin\boot-wim.txt echo add 'ISOFOLDER^\sources^\%%#' '^\sources^\background.png'
 )
 for /f %%# in (bin\bootwim.txt) do if exist "ISOFOLDER\sources\%%#" (
 >>bin\boot-wim.txt echo add 'ISOFOLDER^\sources^\%%#' '^\sources^\%%#'
